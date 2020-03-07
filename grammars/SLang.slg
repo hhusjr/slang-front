@@ -1,0 +1,15 @@
+Main <SLang> ::== <Program>
+
+Main    <Program> ::== <Element> <Program>
+Epsilon <Program> ::== $
+
+Common              <Element> ::== <Statement>
+FunctionDeclaration <Element> ::== FUNC [ID] ( <FormalParameterList> ) <Statement>
+
+Main    <FormalParameterList> ::== <FormalParameterDeclarator> <FormalParameterListSuffix>
+Epsilon <FormalParameterList> ::== $
+Main    <FormalParameterListSuffix> ::== , <FormalParameterDeclarator> <FormalParameterListSuffix>
+Epsilon <FormalParameterListSuffix> ::== $
+Main <FormalParameterDeclarator> ::== [ID] [ID] <DimensionDeclarator>
+Main    <DimensionDeclarator> ::== ( NUMBER_LITERAL )
+Epsilon <DimensionDeclarator> ::== $

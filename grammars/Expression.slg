@@ -1,0 +1,93 @@
+# Primary Expression
+NumberLiteral <PrimaryExpression> ::== [NUMBER_LITERAL]
+StringLiteral <PrimaryExpression> ::== [STRING_LITERAL]
+CharLiteral   <PrimaryExpression> ::== [CHAR_LITERAL]
+TrueLiteral   <PrimaryExpression> ::== [TRUE]
+FalseLiteral  <PrimaryExpression> ::== [FALSE]
+Identifier    <PrimaryExpression> ::== [ID] <MemberExpressionSuffix>
+Brackets      <PrimaryExpression> ::== ( <Expression> )
+Array         <PrimaryExpression> ::== [[] <CommaSeparatedExpression> ]
+
+# CommaSeparatedExpression
+Main <CommaSeparatedExpression> ::== <Expression> <CommaSeparatedExpressionSuffix>
+Epsilon <CommaSeparatedExpression> ::== $
+Main <CommaSeparatedExpressionSuffix> ::== , <Expression> <CommaSeparatedExpressionSuffix>
+Epsilon <CommaSeparatedExpressionSuffix> ::== $
+
+# Member Expression Suffix
+Epsilon      <MemberExpressionSuffix> ::== $
+Array        <MemberExpressionSuffix> ::== [ <Expression> ] <ArrayMemberExpressionSuffix>
+FunctionArgs <MemberExpressionSuffix> ::== ( <ArgumentListOpt> )
+Main    <ArrayMemberExpressionSuffix> ::== [ <Expression> ] <ArrayMemberExpressionSuffix>
+Epsilon <ArrayMemberExpressionSuffix> ::== $
+
+# Highest priority: Unary Expression
+Primary  <UnaryExpression> ::== <PrimaryExpression>
+Negative <UnaryExpression> ::== [SUB] <UnaryExpression>
+Not      <UnaryExpression> ::== [NOT] <UnaryExpression>
+
+# Priority1: * / %
+Main <MultiplyingExpression> ::== <UnaryExpression> <MultiplyingExpressionSuffix>
+Product  <MultiplyingExpressionSuffix> ::== [PROD] <UnaryExpression> <MultiplyingExpressionSuffix>
+Division <MultiplyingExpressionSuffix> ::== [DIV]  <UnaryExpression> <MultiplyingExpressionSuffix>
+Mod      <MultiplyingExpressionSuffix> ::== [%]    <UnaryExpression> <MultiplyingExpressionSuffix>
+Epsilon  <MultiplyingExpressionSuffix> ::== $
+
+# Priority2: + -
+Main <LinearExpression> ::== <MultiplyingExpression> <LinearExpressionSuffix>
+Plus    <LinearExpressionSuffix> ::== [PLUS] <MultiplyingExpression> <LinearExpressionSuffix>
+Sub     <LinearExpressionSuffix> ::== [SUB]  <MultiplyingExpression> <LinearExpressionSuffix>
+Epsilon <LinearExpressionSuffix> ::== $
+
+# Priority3: << >>
+Main <ShiftExpression> ::== <LinearExpression> <ShiftExpressionSuffix>
+ShiftLeft  <ShiftExpressionSuffix> ::== [SHL] <LinearExpression> <ShiftExpressionSuffix>
+ShiftRight <ShiftExpressionSuffix> ::== [SHR] <LinearExpression> <ShiftExpressionSuffix>
+Epsilon    <ShiftExpressionSuffix> ::== $
+
+# Priority4: < > <= >=
+Main <CompareExpression> ::== <ShiftExpression> <CompareExpressionSuffix>
+LessThan           <CompareExpressionSuffix> ::== [LT]  <ShiftExpression> <CompareExpressionSuffix>
+GreaterThan        <CompareExpressionSuffix> ::== [GT]  <ShiftExpression> <CompareExpressionSuffix>
+LessThanOrEqual    <CompareExpressionSuffix> ::== [LTE] <ShiftExpression> <CompareExpressionSuffix>
+GreaterThanOrEqual <CompareExpressionSuffix> ::== [GTE] <ShiftExpression> <CompareExpressionSuffix>
+Epsilon            <CompareExpressionSuffix> ::== $
+
+# Priority5: == !=
+Main <EqualityExpression> ::== <CompareExpression> <EqualityExpressionSuffix>
+IsEqual    <EqualityExpressionSuffix> ::== [IS_EQ]  <CompareExpression> <EqualityExpressionSuffix>
+IsNotEqual <EqualityExpressionSuffix> ::== [IS_NEQ] <CompareExpression> <EqualityExpressionSuffix>
+Epsilon    <EqualityExpressionSuffix> ::== $
+
+# Priority6: &
+Main <BitwiseAndExpression> ::== <EqualityExpression> <BitwiseAndExpressionSuffix>
+And     <BitwiseAndExpressionSuffix> ::== [AND] <EqualityExpression> <BitwiseAndExpressionSuffix>
+Epsilon <BitwiseAndExpressionSuffix> ::== $
+
+# Priority7: ^
+Main <BitwiseXorExpression> ::== <BitwiseAndExpression> <BitwiseXorExpressionSuffix>
+Xor     <BitwiseXorExpressionSuffix> ::== [XOR] <BitwiseAndExpression> <BitwiseXorExpressionSuffix>
+Epsilon <BitwiseXorExpressionSuffix> ::== $
+
+# Priority8: |
+Main <BitwiseOrExpression> ::== <BitwiseXorExpression> <BitwiseOrExpressionSuffix>
+Or      <BitwiseOrExpressionSuffix> ::== [OR] <BitwiseXorExpression> <BitwiseOrExpressionSuffix>
+Epsilon <BitwiseOrExpressionSuffix> ::== $
+
+# Priority9: &&
+Main <BitwiseLogicalAndExpression> ::== <BitwiseOrExpression> <BitwiseLogicalAndExpressionSuffix>
+LogicalAnd <BitwiseLogicalAndExpressionSuffix> ::== [ANDL] <BitwiseOrExpression> <BitwiseLogicalAndExpressionSuffix>
+Epsilon    <BitwiseLogicalAndExpressionSuffix> ::== $
+
+# Priority10: ||
+Main <BitwiseLogicalOrExpression> ::== <BitwiseLogicalAndExpression> <BitwiseLogicalOrExpressionSuffix>
+LogicalOr <BitwiseLogicalOrExpressionSuffix> ::== [ORL] <BitwiseLogicalAndExpression> <BitwiseLogicalOrExpressionSuffix>
+Epsilon   <BitwiseLogicalOrExpressionSuffix> ::== $
+
+# Assign Expression
+Main <AssignExpression> ::== <BitwiseLogicalOrExpression> <AssignExpressionSuffix>
+Assign  <AssignExpressionSuffix> ::== [EQ] <BitwiseLogicalOrExpression> <AssignExpressionSuffix>
+Epsilon <AssignExpressionSuffix> ::== $
+
+# Expression
+Main <Expression> ::== <AssignExpression>

@@ -1,0 +1,29 @@
+# Statements
+Main    <Statements> ::== <Statement> <Statements>
+Epsilon <Statements> ::== $
+
+# Compound Statement
+Main <CompoundStatement> ::== { <Statements> }
+Compound <Statement> ::== <CompoundStatement>
+
+# Expression Statement
+Expression <Statement> ::== <Expression> ;
+
+# Variable Declaration Statement
+VariableDeclaration <Statement> ::== VAR [ID] <VariableDeclaratorList> ;
+Main <VariableDeclaratorList> ::== <VariableDeclarator> <VariableDeclaratorListSuffix>
+Main    <VariableDeclaratorListSuffix> ::== , <VariableDeclarator> <VariableDeclaratorListSuffix>
+Epsilon <VariableDeclaratorListSuffix> ::== $
+Main <VariableDeclarator> ::== [ID] <VariableArraySizeDeclarator> <InitializerDeclarator>
+Main    <VariableArraySizeDeclarator> ::== [ <ArrayDimension> ] <VariableArraySizeDeclarator>
+Epsilon <VariableArraySizeDeclarator> ::== $
+Main    <InitializerDeclarator> ::== EQ <Expression>
+Epsilon <InitializerDeclarator> ::== $
+Main    <ArrayDimension> ::== [NUMBER_LITERAL]
+Epsilon <ArrayDimension> ::== $
+
+# If-Else Statement
+If <Statement> ::== [IF] ( <Expression> ) <Statement> <ElseStatement>
+Epsilon <ElseStatement> ::== $
+Main    <ElseStatement> ::== ELSE <Statement>
+
