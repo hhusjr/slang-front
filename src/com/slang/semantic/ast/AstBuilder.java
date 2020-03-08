@@ -13,17 +13,20 @@ import com.slang.semantic.type.BasicType;
 import com.slang.semantic.type.CodeTypeMapping;
 import com.slang.semantic.type.Type;
 import com.slang.semantic.type.TypeFactory;
+import com.slang.utils.Pair;
 import com.slang.utils.Panic;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Stack;
 
 /**
  * 根据语法树构造抽象语法树
  */
 public class AstBuilder {
     private SymbolTableManager symbolTableManager = new SymbolTableManager();
+    private Stack<LoopStatement> loopBodyStack = new Stack<>();
     
     public Node invokeAstBuilderMethod(ParseTreeNode root) {
         Method method = null;
@@ -78,8 +81,87 @@ public class AstBuilder {
         return getBlockStatements(root);
     }
 
+    // 普通语句
     public Node buildCommonElement(ParseTreeNode root) {
         return this.invokeAstBuilderMethod(root.getChildren().get(0));
+    }
+
+    /*
+     * 函数定义
+     * Main    <FormalParameterList> ::== <FormalParameterDeclarator> <FormalParameterListSuffix>
+     * Epsilon <FormalParameterList> ::== $
+     * Main    <FormalParameterListSuffix> ::== , <FormalParameterDeclarator> <FormalParameterListSuffix>
+     * Epsilon <FormalParameterListSuffix> ::== $
+     * Main <FormalParameterDeclarator> ::== [ID] [ID] <DimensionDeclarator>
+     * Main <ReturnTypeDeclarator> ::== [ID] <DimensionDeclarator>
+     * Main    <DimensionDeclarator> ::== ( [NUMBER_LITERAL] )
+     * Epsilon <DimensionDeclarator> ::== $
+     */
+    public Node buildFunctionDeclarationElement(ParseTreeNode root) {
+        // 函数名称
+        String identifier = root.getChildren().get(1).getToken().value;
+        // 函数返回值类型
+        String returnTypeIdentifier = root.getChildren().get(0).getToken().value;
+        if (!CodeTypeMapping.codeTypeMapping.containsKey(returnTypeIdentifier)) {
+            Panic panic = new Panic(String.format("Unknown return type identifier %s", returnTypeIdentifier), root.getChildren().get(1).getToken().codeAxis);
+            panic.show();
+        }
+        Type returnType = TypeFactory.type(CodeTypeMapping.codeTypeMapping.get(returnTypeIdentifier));
+        // 形式参数列表
+        ArrayList<Type> paramTypeList = new ArrayList<>();
+        ArrayList<String> paramIdentifiersList = new ArrayList<>();
+        ParseTreeNode currentParameter = root.getChildren().get(2);
+        while (!currentParameter.isFinal()) {
+            ParseTreeNode declarator = currentParameter.getChildren().get(0);
+            String typeIdentifier = declarator.getChildren().get(0).getToken().value;
+            if (!CodeTypeMapping.codeTypeMapping.containsKey(typeIdentifier)) {
+                Panic panic = new Panic(String.format("Unknown function parameter type identifier %s", typeIdentifier), declarator.getChildren().get(0).getToken().codeAxis);
+                panic.show();
+            }
+            BasicType type = CodeTypeMapping.codeTypeMapping.get(typeIdentifier);
+            paramIdentifiersList.add(declarator.getChildren().get(1).getToken().value);
+            int dimension = 0;
+            if (!declarator.getChildren().get(2).isFinal()) {
+                dimension = Integer.parseInt(declarator.getChildren().get(2).getChildren().get(0).getToken().value);
+                if (dimension < 0) {
+                    Panic panic = new Panic("Wrong array dimension", declarator.getChildren().get(2).getChildren().get(0).getToken().codeAxis);
+                    panic.show();
+                }
+            }
+            if (dimension == 0) {
+                paramTypeList.add(TypeFactory.type(type));
+            } else {
+                ArrayList<Integer> dim = new ArrayList<>();
+                for (int i = 0; i < dimension; i++) {
+                    dim.add(null);
+                }
+                Type paramType = TypeFactory.type(type, dim, false);
+                // 需要忽略具体的维数
+                paramType.ignoreDimNumber = true;
+                paramTypeList.add(paramType);
+            }
+            currentParameter = currentParameter.getChildren().get(1);
+        }
+        Type functionType = TypeFactory.type(paramTypeList);
+        if (!this.symbolTableManager.hasSymbol(identifier)) {
+            ArrayList<Pair<Type, Type>> overloadableTypes = new ArrayList<>();
+            overloadableTypes.add(new Pair<>(functionType, returnType));
+            this.symbolTableManager.addSymbol(identifier, new Symbol(identifier, overloadableTypes));
+        } else {
+            this.symbolTableManager.findSymbol(identifier, root.getChildren().get(0).getToken().codeAxis).newOverload(functionType, returnType);
+        }
+        ParseTreeNode bodyNode = root.getChildren().get(3);
+        if (!bodyNode.isFinal()) {
+            this.symbolTableManager.enterScope();
+            assert paramTypeList.size() == paramIdentifiersList.size();
+            for (int i = 0; i < paramTypeList.size(); i++) {
+                this.symbolTableManager.addSymbol(paramIdentifiersList.get(i), new Symbol(paramIdentifiersList.get(i), paramTypeList.get(i)));
+            }
+            Statements body = (Statements) this.invokeAstBuilderMethod(bodyNode.getChildren().get(0));
+            this.symbolTableManager.leaveScope();
+            return new FunctionDeclarationStatement(identifier, functionType, returnType, body, paramIdentifiersList);
+        }
+        return null;
     }
 
     /*
@@ -88,6 +170,7 @@ public class AstBuilder {
     public Node buildMainStatements(ParseTreeNode root) {
         return getBlockStatements(root);
     }
+
     public Node buildEpsilonStatements(ParseTreeNode root) {
         return new Statements();
     }
@@ -125,6 +208,10 @@ public class AstBuilder {
             ParseTreeNode currentDeclarator = currentDeclaratorList.getChildren().get(0);
             Token token = currentDeclarator.getChildren().get(0).getToken();
             String identifier = token.value;
+            if (this.symbolTableManager.hasSymbolInCurrentScope(identifier)) {
+                Panic panic = new Panic(String.format("Identifier %s exists in current scope", identifier), token.codeAxis);
+                panic.show();
+            }
 
             /*
              * Main <VariableDeclarator> ::== [ID] <VariableArraySizeDeclarator> <InitializerDeclarator>
@@ -263,6 +350,56 @@ public class AstBuilder {
         return new IfStatement(condition, trueBlock, falseBlock, root.getChildren().get(0).getToken().codeAxis);
     }
 
+    // 循环结构语句 For While Continue Break
+    public Node buildForStatement(ParseTreeNode root) {
+        this.symbolTableManager.enterScope();
+        Expression begin = null, condition = null, delta = null;
+        ParseTreeNode beginExpression = root.getChildren().get(0);
+        if (!beginExpression.isFinal()) {
+            begin = (Expression) this.invokeAstBuilderMethod(beginExpression.getChildren().get(0));
+        }
+        ParseTreeNode conditionExpression = root.getChildren().get(1);
+        if (!conditionExpression.isFinal()) {
+            condition = (Expression) this.invokeAstBuilderMethod(conditionExpression.getChildren().get(0));
+        }
+        ParseTreeNode deltaExpression = root.getChildren().get(2);
+        if (!deltaExpression.isFinal()) {
+            delta = (Expression) this.invokeAstBuilderMethod(deltaExpression.getChildren().get(0));
+        }
+        LoopStatement forStatement = new ForStatement(begin, condition, delta);
+        this.loopBodyStack.push(forStatement);
+        forStatement.setLoopBody((Statement) this.invokeAstBuilderMethod(root.getChildren().get(3)));
+        this.loopBodyStack.pop();
+        this.symbolTableManager.leaveScope();
+        return forStatement;
+    }
+
+    public Node buildWhileStatement(ParseTreeNode root) {
+        this.symbolTableManager.enterScope();
+        LoopStatement whileStatement = new WhileStatement((Expression) this.invokeAstBuilderMethod(root.getChildren().get(0)));
+        this.loopBodyStack.push(whileStatement);
+        whileStatement.setLoopBody((Statement) this.invokeAstBuilderMethod(root.getChildren().get(1)));
+        this.loopBodyStack.pop();
+        this.symbolTableManager.leaveScope();
+        return whileStatement;
+    }
+
+    public Node buildBreakStatement(ParseTreeNode root) {
+        if (this.loopBodyStack.empty()) {
+            Panic panic = new Panic("Unexpected break statement, it must be inside a loop body", root.getChildren().get(0).getToken().codeAxis);
+            panic.show();
+        }
+        return new FlowControlStatement(FlowControlType.BREAK, this.loopBodyStack.peek());
+    }
+
+    public Node buildContinueStatement(ParseTreeNode root) {
+        if (this.loopBodyStack.empty()) {
+            Panic panic = new Panic("Unexpected continue statement, it must be inside a loop body", root.getChildren().get(0).getToken().codeAxis);
+            panic.show();
+        }
+        return new FlowControlStatement(FlowControlType.CONTINUE, this.loopBodyStack.peek());
+    }
+
     /*
      * 表达式
      */
@@ -341,12 +478,34 @@ public class AstBuilder {
         return new Identifier(symbol, expressions);
     }
 
+    public Node buildFunctionArgsMemberExpressionSuffix(ParseTreeNode root) {
+        Token identifierToken = (Token) root.getAttribute("identifierToken");
+        Symbol symbol = this.symbolTableManager.findSymbol(identifierToken.value, identifierToken.codeAxis);
+        ArrayList<Type> types = new ArrayList<>();
+        if (!root.isFinal()) {
+            ParseTreeNode current = root.getChildren().get(0);
+            while (!current.isFinal()) {
+                Expression expression = (Expression) this.invokeAstBuilderMethod(current.getChildren().get(0));
+                types.add(expression.getType());
+                current = current.getChildren().get(1);
+            }
+        }
+        Type type = TypeFactory.type(types);
+        Pair<Type, Type> overload = symbol.getOverload(type);
+        if (overload == null) {
+            Panic panic = new Panic(String.format("Function %s does not have the overload %s", identifierToken.value, type), identifierToken.codeAxis);
+            panic.show();
+        }
+        return new FunctionExpression(symbol, overload.first, overload.second);
+    }
+
     /*
      * 一元表达式(UnaryExpression)
      */
     public Node buildPrimaryUnaryExpression(ParseTreeNode root) {
         return this.invokeAstBuilderMethod(root.getChildren().get(0));
     }
+
     public Node buildNegativeUnaryExpression(ParseTreeNode root) {
         Token token = root.getChildren().get(0).getToken();
         Expression operand = (Expression) this.invokeAstBuilderMethod(root.getChildren().get(1));

@@ -4,12 +4,14 @@ Main    <Program> ::== <Element> <Program>
 Epsilon <Program> ::== $
 
 Common              <Element> ::== <Statement>
-FunctionDeclaration <Element> ::== FUNC [ID] ( <FormalParameterList> ) <Statement>
+FunctionDeclaration <Element> ::== FUNC [ID] [ID] ( <FormalParameterList> ) <FunctionBody>
 
 Main    <FormalParameterList> ::== <FormalParameterDeclarator> <FormalParameterListSuffix>
 Epsilon <FormalParameterList> ::== $
 Main    <FormalParameterListSuffix> ::== , <FormalParameterDeclarator> <FormalParameterListSuffix>
 Epsilon <FormalParameterListSuffix> ::== $
 Main <FormalParameterDeclarator> ::== [ID] [ID] <DimensionDeclarator>
-Main    <DimensionDeclarator> ::== ( NUMBER_LITERAL )
+Main    <DimensionDeclarator> ::== ( [NUMBER_LITERAL] )
 Epsilon <DimensionDeclarator> ::== $
+Main  <FunctionBody> ::== <Statement>
+Empty <FunctionBody> ::== ;

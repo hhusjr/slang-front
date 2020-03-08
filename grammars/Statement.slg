@@ -27,3 +27,8 @@ If <Statement> ::== [IF] ( <Expression> ) <Statement> <ElseStatement>
 Epsilon <ElseStatement> ::== $
 Main    <ElseStatement> ::== ELSE <Statement>
 
+# Loop statement
+For      <Statement> ::== FOR ( <ExpressionOpt> ; <ExpressionOpt> ; <ExpressionOpt> ) <Statement>
+While    <Statement> ::== WHILE ( <Expression> ) <Statement>
+Break    <Statement> ::== [BREAK] ;
+Continue <Statement> ::== [CONTINUE] ;

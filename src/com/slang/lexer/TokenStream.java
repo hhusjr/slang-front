@@ -16,9 +16,6 @@ class LexerUtil {
      */
     public static HashSet<String> reservedWords = new HashSet<>() {{
         add("print");
-        add("to");
-        add("from");
-        add("loop");
         add("ref");
         add("func");
         add("ret");
@@ -28,6 +25,9 @@ class LexerUtil {
         add("else");
         add("true");
         add("false");
+        add("break");
+        add("continue");
+        add("for");
     }};
 
     /**

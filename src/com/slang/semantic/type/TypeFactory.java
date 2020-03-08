@@ -23,4 +23,8 @@ public class TypeFactory {
     public static Type type(BasicType elementType, ArrayList<Integer> dim, boolean isArrayExpression) {
         return new Type(TypeFactory.type(elementType), dim, isArrayExpression);
     }
+
+    public static Type type(ArrayList<Type> formalParameterTypes) {
+        return new Type(formalParameterTypes);
+    }
 }

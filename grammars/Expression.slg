@@ -17,7 +17,7 @@ Epsilon <CommaSeparatedExpressionSuffix> ::== $
 # Member Expression Suffix
 Epsilon      <MemberExpressionSuffix> ::== $
 Array        <MemberExpressionSuffix> ::== [ <Expression> ] <ArrayMemberExpressionSuffix>
-FunctionArgs <MemberExpressionSuffix> ::== ( <ArgumentListOpt> )
+FunctionArgs <MemberExpressionSuffix> ::== ( <CommaSeparatedExpression> )
 Main    <ArrayMemberExpressionSuffix> ::== [ <Expression> ] <ArrayMemberExpressionSuffix>
 Epsilon <ArrayMemberExpressionSuffix> ::== $
 
@@ -91,3 +91,7 @@ Epsilon <AssignExpressionSuffix> ::== $
 
 # Expression
 Main <Expression> ::== <AssignExpression>
+
+# Nullable expression
+Main    <ExpressionOpt> ::== <Expression>
+Epsilon <ExpressionOpt> ::== $

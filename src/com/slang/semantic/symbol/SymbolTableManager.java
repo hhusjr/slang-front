@@ -10,6 +10,21 @@ public class SymbolTableManager {
         return currentSymbolTable;
     }
 
+    public boolean hasSymbol(String identifier) {
+        SymbolTable symbolTable = this.currentSymbolTable;
+        while (!symbolTable.hasSymbol(identifier)) {
+            if (symbolTable.next == null) {
+                return false;
+            }
+            symbolTable = symbolTable.next;
+        }
+        return true;
+    }
+
+    public boolean hasSymbolInCurrentScope(String identifier) {
+        return this.currentSymbolTable.hasSymbol(identifier);
+    }
+
     public Symbol findSymbol(String identifier, CodeAxis codeAxis) {
         SymbolTable symbolTable = this.currentSymbolTable;
         while (!symbolTable.hasSymbol(identifier)) {

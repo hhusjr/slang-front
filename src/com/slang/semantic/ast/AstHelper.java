@@ -17,7 +17,7 @@ public class AstHelper {
                 System.out.println(String.format("%s%s: ", indentString, property.first));
                 AstHelper.printAstTree((Node) property.second, indent + 1);
             } else {
-                System.out.println(String.format("%s%s: \"%s\"", indentString, property.first, property.second.toString()));
+                System.out.println(String.format("%s%s: %s", indentString, property.first, property.second));
             }
         }
     }

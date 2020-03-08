@@ -2,6 +2,7 @@ package com.slang.semantic.type;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
 
 public class Type {
     public BasicType basicType;
@@ -27,6 +28,7 @@ public class Type {
     }
 
     Type(ArrayList<Type> formalParameterTypes) {
+        this.basicType = BasicType.FUNCTION;
         this.formalParameterTypes = formalParameterTypes;
     }
 
@@ -44,12 +46,18 @@ public class Type {
             case ARRAY: {
                 assert this.dim != null;
                 assert this.elementType != null;
+                // 对方必须为数组
+                if (another.basicType != BasicType.ARRAY) {
+                    return false;
+                }
                 if (this.isArrayExpression) {
                     return false;
                 }
-                // 非数组常量之间类型兼容性，需要保证元素类型、维度严格相等
+                // 非数组常量之间类型兼容性，需要保证元素类型、维度严格相等（除去忽略维度的情况）
                 if (!another.isArrayExpression) {
-                    return this.elementType.compatibleWith(another.elementType) && this.dim.equals(another.dim);
+                    if (!this.elementType.compatibleWith(another.elementType)) return false;
+                    if (this.dim.size() != another.dim.size()) return false;
+                    return this.ignoreDimNumber || another.ignoreDimNumber || this.dim.equals(another.dim);
                 }
                 // 数组常量
                 if (another.elementType != null && !another.elementType.compatibleWith(this.elementType)) {
@@ -73,6 +81,29 @@ public class Type {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Type type = (Type) o;
+        if (type.basicType != this.basicType) return false;
+        switch (this.basicType) {
+            case ARRAY:
+                if (type.dim.size() != this.dim.size()) return false;
+                if (!this.ignoreDimNumber && !type.ignoreDimNumber && !this.dim.equals(type.dim)) return false;
+                break;
+            case FUNCTION:
+                if (!this.formalParameterTypes.equals(type.formalParameterTypes)) return false;
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(basicType, elementType, formalParameterTypes);
+    }
+
+    @Override
     public String toString() {
         HashMap<BasicType, String> readableType = new HashMap<>() {{
             put(BasicType.INT, "int");
@@ -93,7 +124,12 @@ public class Type {
                 } else {
                     dimStr.append(String.format("{%sd}", this.dim.size()));
                 }
-                String typeStr = String.format("%s%s", readableType.get(this.elementType.basicType), dimStr);
+                String typeStr;
+                if (this.elementType != null) {
+                    typeStr = String.format("%s%s", readableType.get(this.elementType.basicType), dimStr);
+                } else {
+                    typeStr = String.format("?%s", dimStr);
+                }
                 if (this.isArrayExpression) {
                     return "(ArrayExpression) ".concat(typeStr);
                 }
