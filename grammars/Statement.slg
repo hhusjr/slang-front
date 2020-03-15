@@ -32,3 +32,6 @@ For      <Statement> ::== FOR ( <ExpressionOpt> ; <ExpressionOpt> ; <ExpressionO
 While    <Statement> ::== WHILE ( <Expression> ) <Statement>
 Break    <Statement> ::== [BREAK] ;
 Continue <Statement> ::== [CONTINUE] ;
+
+# Printk statement
+Printk   <Statement> ::== PRINTK <Expression> ;

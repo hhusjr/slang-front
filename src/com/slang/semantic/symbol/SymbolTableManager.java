@@ -5,6 +5,7 @@ import com.slang.utils.Panic;
 
 public class SymbolTableManager {
     private SymbolTable currentSymbolTable = new SymbolTable();
+    private int level = 0;
 
     public SymbolTable getCurrentSymbolTable() {
         return currentSymbolTable;
@@ -38,6 +39,7 @@ public class SymbolTableManager {
     }
 
     public void addSymbol(String identifier, Symbol symbol) {
+        symbol.level = this.level;
         this.currentSymbolTable.addSymbol(identifier, symbol);
     }
 
@@ -45,9 +47,11 @@ public class SymbolTableManager {
         SymbolTable newSymbolTable = new SymbolTable();
         newSymbolTable.next = this.currentSymbolTable;
         this.currentSymbolTable = newSymbolTable;
+        this.level++;
     }
 
     public void leaveScope() {
         this.currentSymbolTable = this.currentSymbolTable.next;
+        this.level--;
     }
 }

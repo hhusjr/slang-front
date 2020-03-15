@@ -15,7 +15,7 @@ class LexerUtil {
      * 定义保留字集合
      */
     public static HashSet<String> reservedWords = new HashSet<>() {{
-        add("print");
+        add("printk");
         add("ref");
         add("func");
         add("ret");

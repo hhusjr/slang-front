@@ -10,7 +10,6 @@ public class Type {
     public Type elementType;
     public ArrayList<Integer> dim;
     public boolean isArrayExpression;
-    public boolean ignoreDimNumber;
     // 函数形式参数类型列表
     public ArrayList<Type> formalParameterTypes;
 
@@ -36,6 +35,15 @@ public class Type {
         return this.basicType == with;
     }
 
+    // 忽略第一个维度之后的维度数组
+    public ArrayList<Integer> getDimBody() {
+        ArrayList<Integer> dimBody = new ArrayList<>();
+        for (int i = 1; i < this.dim.size(); i++) {
+            dimBody.add(this.dim.get(i));
+        }
+        return dimBody;
+    }
+
     public boolean compatibleWith(Type another) {
         switch (this.basicType) {
             case INT:
@@ -57,7 +65,7 @@ public class Type {
                 if (!another.isArrayExpression) {
                     if (!this.elementType.compatibleWith(another.elementType)) return false;
                     if (this.dim.size() != another.dim.size()) return false;
-                    return this.ignoreDimNumber || another.ignoreDimNumber || this.dim.equals(another.dim);
+                    return this.getDimBody().equals(another.getDimBody());
                 }
                 // 数组常量
                 if (another.elementType != null && !another.elementType.compatibleWith(this.elementType)) {
@@ -66,11 +74,10 @@ public class Type {
                 if (this.dim.size() != another.dim.size()) {
                     return false;
                 }
-                if (!ignoreDimNumber) {
-                    for (int i = 0; i < this.dim.size(); i++) {
-                        if (another.dim.get(i) > this.dim.get(i)) {
-                            return false;
-                        }
+                // 需要忽略第一个维度进行比较
+                for (int i = 1; i < this.dim.size(); i++) {
+                    if (another.dim.get(i) > this.dim.get(i)) {
+                        return false;
                     }
                 }
                 return true;
@@ -89,7 +96,7 @@ public class Type {
         switch (this.basicType) {
             case ARRAY:
                 if (type.dim.size() != this.dim.size()) return false;
-                if (!this.ignoreDimNumber && !type.ignoreDimNumber && !this.dim.equals(type.dim)) return false;
+                if (!this.getDimBody().equals(type.getDimBody())) return false;
                 break;
             case FUNCTION:
                 if (!this.formalParameterTypes.equals(type.formalParameterTypes)) return false;
@@ -117,12 +124,8 @@ public class Type {
                 assert this.dim != null;
                 assert this.elementType != null;
                 StringBuilder dimStr = new StringBuilder();
-                if (!this.ignoreDimNumber) {
-                    for (Integer d : this.dim) {
-                        dimStr.append(String.format("[%s]", d));
-                    }
-                } else {
-                    dimStr.append(String.format("{%sd}", this.dim.size()));
+                for (Integer d : this.dim) {
+                    dimStr.append(String.format("[%s]", d));
                 }
                 String typeStr;
                 if (this.elementType != null) {

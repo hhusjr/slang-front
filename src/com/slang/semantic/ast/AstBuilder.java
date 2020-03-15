@@ -9,6 +9,7 @@ import com.slang.semantic.ast.node.expression.*;
 import com.slang.semantic.ast.node.statement.*;
 import com.slang.semantic.symbol.Symbol;
 import com.slang.semantic.symbol.SymbolTableManager;
+import com.slang.semantic.symbol.SymbolType;
 import com.slang.semantic.type.BasicType;
 import com.slang.semantic.type.CodeTypeMapping;
 import com.slang.semantic.type.Type;
@@ -88,14 +89,6 @@ public class AstBuilder {
 
     /*
      * 函数定义
-     * Main    <FormalParameterList> ::== <FormalParameterDeclarator> <FormalParameterListSuffix>
-     * Epsilon <FormalParameterList> ::== $
-     * Main    <FormalParameterListSuffix> ::== , <FormalParameterDeclarator> <FormalParameterListSuffix>
-     * Epsilon <FormalParameterListSuffix> ::== $
-     * Main <FormalParameterDeclarator> ::== [ID] [ID] <DimensionDeclarator>
-     * Main <ReturnTypeDeclarator> ::== [ID] <DimensionDeclarator>
-     * Main    <DimensionDeclarator> ::== ( [NUMBER_LITERAL] )
-     * Epsilon <DimensionDeclarator> ::== $
      */
     public Node buildFunctionDeclarationElement(ParseTreeNode root) {
         // 函数名称
@@ -113,42 +106,58 @@ public class AstBuilder {
         ParseTreeNode currentParameter = root.getChildren().get(2);
         while (!currentParameter.isFinal()) {
             ParseTreeNode declarator = currentParameter.getChildren().get(0);
-            String typeIdentifier = declarator.getChildren().get(0).getToken().value;
+            Token declaratorToken = declarator.getChildren().get(0).getToken();
+            String typeIdentifier = declaratorToken.value;
+            CodeAxis declaratorCodeAxis = declaratorToken.codeAxis;
             if (!CodeTypeMapping.codeTypeMapping.containsKey(typeIdentifier)) {
-                Panic panic = new Panic(String.format("Unknown function parameter type identifier %s", typeIdentifier), declarator.getChildren().get(0).getToken().codeAxis);
+                Panic panic = new Panic(String.format("Unknown function parameter type identifier %s", typeIdentifier), declaratorCodeAxis);
                 panic.show();
             }
             BasicType type = CodeTypeMapping.codeTypeMapping.get(typeIdentifier);
             paramIdentifiersList.add(declarator.getChildren().get(1).getToken().value);
-            int dimension = 0;
-            if (!declarator.getChildren().get(2).isFinal()) {
-                dimension = Integer.parseInt(declarator.getChildren().get(2).getChildren().get(0).getToken().value);
-                if (dimension < 0) {
-                    Panic panic = new Panic("Wrong array dimension", declarator.getChildren().get(2).getChildren().get(0).getToken().codeAxis);
-                    panic.show();
+            ParseTreeNode currentArraySizeDeclarator = declarator.getChildren().get(2);
+            ArrayList<Integer> dim = new ArrayList<>();
+            boolean first = true;
+            while (!currentArraySizeDeclarator.isFinal()) {
+                ParseTreeNode dimNode = currentArraySizeDeclarator.getChildren().get(0);
+                Integer currentDim = null;
+                if (!dimNode.isFinal()) {
+                    Token numToken = dimNode.getChildren().get(0).getToken();
+                    currentDim = Integer.parseInt(numToken.value);
+                    if (currentDim <= 0) {
+                        Panic panic = new Panic("Array dimension definition error in function parameters, number overflow", numToken.codeAxis);
+                        panic.show();
+                    }
                 }
+                if (!first) {
+                    if (currentDim == null) {
+                        Panic panic = new Panic("Only array 1d dimension can be ignored", declaratorCodeAxis);
+                        panic.show();
+                    }
+                } else {
+                    first = false;
+                }
+                // 函数第一个维度未定义的情况下直接设为1。传地址无所谓，只需要考虑其他维度计算
+                dim.add(currentDim == null ? 1 : currentDim);
+                currentArraySizeDeclarator = currentArraySizeDeclarator.getChildren().get(1);
             }
-            if (dimension == 0) {
+            if (dim.size() == 0) {
                 paramTypeList.add(TypeFactory.type(type));
             } else {
-                ArrayList<Integer> dim = new ArrayList<>();
-                for (int i = 0; i < dimension; i++) {
-                    dim.add(null);
-                }
-                Type paramType = TypeFactory.type(type, dim, false);
-                // 需要忽略具体的维数
-                paramType.ignoreDimNumber = true;
-                paramTypeList.add(paramType);
+                paramTypeList.add(TypeFactory.type(type, dim, false));
             }
             currentParameter = currentParameter.getChildren().get(1);
         }
         Type functionType = TypeFactory.type(paramTypeList);
+        Symbol symbol;
         if (!this.symbolTableManager.hasSymbol(identifier)) {
             ArrayList<Pair<Type, Type>> overloadableTypes = new ArrayList<>();
             overloadableTypes.add(new Pair<>(functionType, returnType));
-            this.symbolTableManager.addSymbol(identifier, new Symbol(identifier, overloadableTypes));
+            symbol = new Symbol(identifier, overloadableTypes);
+            this.symbolTableManager.addSymbol(identifier, symbol);
         } else {
-            this.symbolTableManager.findSymbol(identifier, root.getChildren().get(0).getToken().codeAxis).newOverload(functionType, returnType);
+            symbol = this.symbolTableManager.findSymbol(identifier, root.getChildren().get(0).getToken().codeAxis);
+            symbol.newOverload(functionType, returnType);
         }
         ParseTreeNode bodyNode = root.getChildren().get(3);
         if (!bodyNode.isFinal()) {
@@ -157,9 +166,9 @@ public class AstBuilder {
             for (int i = 0; i < paramTypeList.size(); i++) {
                 this.symbolTableManager.addSymbol(paramIdentifiersList.get(i), new Symbol(paramIdentifiersList.get(i), paramTypeList.get(i)));
             }
-            Statements body = (Statements) this.invokeAstBuilderMethod(bodyNode.getChildren().get(0));
+            Statement body = (Statement) this.invokeAstBuilderMethod(bodyNode.getChildren().get(0));
             this.symbolTableManager.leaveScope();
-            return new FunctionDeclarationStatement(identifier, functionType, returnType, body, paramIdentifiersList);
+            return new FunctionDeclarationStatement(identifier, symbol, functionType, returnType, body, paramIdentifiersList);
         }
         return null;
     }
@@ -288,15 +297,21 @@ public class AstBuilder {
                         Panic panic = new Panic(String.format("Array dimension definition (%s) not match the initializer (%s)", dim.size(), initializerArray.type.dim.size()), token.codeAxis);
                         panic.show();
                     }
-                    // 3、右值存在比左值大的维数  4、维度一样的情况下，左值存在null维数
+                    // 3、右值存在比左值大的维数（第一个维度不进行检查）  4、维度一样的情况下，左值存在null维数
                     for (int i = 0; i < dim.size(); i++) {
                         if (dim.get(i) != null) {
-                            if (initializerArray.type.dim.get(i) > dim.get(i)) {
-                                Panic panic = new Panic("Array dimension definition not match the initializer", token.codeAxis);
-                                panic.show();
+                            if (i > 0) {
+                                if (initializerArray.type.dim.get(i) > dim.get(i)) {
+                                    Panic panic = new Panic("Array dimension definition not match the initializer", token.codeAxis);
+                                    panic.show();
+                                }
                             }
                         } else {
                             dim.set(i, initializerArray.type.dim.get(i));
+                        }
+                        if (dim.get(i) < 1) {
+                            Panic panic = new Panic("Array dimension definition error, number overflow", token.codeAxis);
+                            panic.show();
                         }
                     }
                 }
@@ -400,6 +415,11 @@ public class AstBuilder {
         return new FlowControlStatement(FlowControlType.CONTINUE, this.loopBodyStack.peek());
     }
 
+    // 内核级输出语句
+    public Node buildPrintkStatement(ParseTreeNode root) {
+        return new PrintkStatement((Expression) this.invokeAstBuilderMethod(root.getChildren().get(0)));
+    }
+
     /*
      * 表达式
      */
@@ -420,7 +440,13 @@ public class AstBuilder {
     }
     public Node buildStringLiteralPrimaryExpression(ParseTreeNode root) {
         Token token = root.getChildren().get(0).getToken();
-        return new Constant(ConstantOperator.STRING_LITERAL, token.value, token.codeAxis);
+        ArrayList<Expression> constants = new ArrayList<>();
+        for (int i = 0; i < token.value.length(); i++) {
+            char character = token.value.charAt(i);
+            constants.add(new Constant(ConstantOperator.CHAR_LITERAL, Character.toString(character), token.codeAxis));
+        }
+        constants.add(new Constant(ConstantOperator.CHAR_LITERAL, "\0", token.codeAxis));
+        return new ArrayExpression(constants, token.codeAxis);
     }
     public Node buildArrayPrimaryExpression(ParseTreeNode root) {
         ParseTreeNode current = root.getChildren().get(1);
@@ -455,11 +481,19 @@ public class AstBuilder {
     public Node buildEpsilonMemberExpressionSuffix(ParseTreeNode root) {
         Token identifierToken = (Token) root.getAttribute("identifierToken");
         Symbol symbol = this.symbolTableManager.findSymbol(identifierToken.value, identifierToken.codeAxis);
+        if (symbol.symbolType != SymbolType.VARIABLE) {
+            Panic panic = new Panic(String.format("Identifier %s does not refer to a variable", identifierToken.value), identifierToken.codeAxis);
+            panic.show();
+        }
         return new Identifier(symbol);
     }
     public Node buildArrayMemberExpressionSuffix(ParseTreeNode root) {
         Token identifierToken = (Token) root.getAttribute("identifierToken");
         Symbol symbol = this.symbolTableManager.findSymbol(identifierToken.value, identifierToken.codeAxis);
+        if (symbol.symbolType != SymbolType.VARIABLE || !symbol.type.is(BasicType.ARRAY)) {
+            Panic panic = new Panic(String.format("Identifier %s does not refer to an array", identifierToken.value), identifierToken.codeAxis);
+            panic.show();
+        }
         ParseTreeNode current = root;
         ArrayList<Expression> expressions = new ArrayList<>();
         while (!current.isFinal()) {
@@ -477,10 +511,13 @@ public class AstBuilder {
         }
         return new Identifier(symbol, expressions);
     }
-
     public Node buildFunctionArgsMemberExpressionSuffix(ParseTreeNode root) {
         Token identifierToken = (Token) root.getAttribute("identifierToken");
         Symbol symbol = this.symbolTableManager.findSymbol(identifierToken.value, identifierToken.codeAxis);
+        if (symbol.symbolType != SymbolType.FUNCTION) {
+            Panic panic = new Panic(String.format("Identifier %s does not refer to a function", identifierToken.value), identifierToken.codeAxis);
+            panic.show();
+        }
         ArrayList<Type> types = new ArrayList<>();
         if (!root.isFinal()) {
             ParseTreeNode current = root.getChildren().get(0);
@@ -516,7 +553,6 @@ public class AstBuilder {
         Expression operand = (Expression) this.invokeAstBuilderMethod(root.getChildren().get(1));
         return new UnaryExpression(UnaryExpressionOperator.NOT, operand, token.codeAxis);
     }
-
 
     /**
      * 二元运算的主要表达式（如Main <Expression> ::== <Term> <Plus>）的处理

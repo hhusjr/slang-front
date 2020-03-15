@@ -23,7 +23,7 @@ public class Identifier implements Expression {
     public ArrayList<Pair<String, Object>> getReadableProperties() {
         ArrayList<Pair<String, Object>> properties = new ArrayList<>();
         properties.add(new Pair<>("identifier", this.symbol.identifier));
-        properties.add(new Pair<>("symbolHash", Integer.toHexString(this.symbol.hashCode())));
+        properties.add(new Pair<>("name", this.symbol.getName()));
         properties.add(new Pair<>("type", this.getType()));
         if (this.arrayMember != null) {
             properties.add(new Pair<>("arrayMember", this.arrayMember));

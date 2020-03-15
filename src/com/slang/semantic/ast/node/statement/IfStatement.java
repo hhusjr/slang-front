@@ -16,7 +16,7 @@ public class IfStatement implements Statement {
 
     public IfStatement(Expression condition, Statement trueBlock, Statement falseBlock, CodeAxis codeAxis) {
         if (!condition.getType().is(BasicType.BOOLEAN)) {
-            Panic panic = new Panic("The condition expression of the If statement must be Boolean type", codeAxis);
+            Panic panic = new Panic(String.format("The condition expression of the If statement must be Boolean type, got %s", condition.getType()), codeAxis);
             panic.show();
         }
         this.condition = condition;

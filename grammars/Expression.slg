@@ -22,9 +22,9 @@ Main    <ArrayMemberExpressionSuffix> ::== [ <Expression> ] <ArrayMemberExpressi
 Epsilon <ArrayMemberExpressionSuffix> ::== $
 
 # Highest priority: Unary Expression
-Primary  <UnaryExpression> ::== <PrimaryExpression>
-Negative <UnaryExpression> ::== [SUB] <UnaryExpression>
-Not      <UnaryExpression> ::== [NOT] <UnaryExpression>
+Primary            <UnaryExpression> ::== <PrimaryExpression>
+Negative           <UnaryExpression> ::== [SUB] <UnaryExpression>
+Not                <UnaryExpression> ::== [NOT] <UnaryExpression>
 
 # Priority1: * / %
 Main <MultiplyingExpression> ::== <UnaryExpression> <MultiplyingExpressionSuffix>

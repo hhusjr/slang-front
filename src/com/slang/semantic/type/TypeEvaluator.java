@@ -48,11 +48,16 @@ public class TypeEvaluator {
             case SUB:
             case PROD:
             case DIV:
+                return TypeEvaluator.higherSizeNumericType(leftOperand, rightOperand, operatorCodeAxis);
             case LT:
             case GT:
             case LTE:
             case GTE:
-                return TypeEvaluator.higherSizeNumericType(leftOperand, rightOperand, operatorCodeAxis);
+                if (!TypeEvaluator.isNumericType(leftOperand) || !TypeEvaluator.isNumericType(rightOperand)) {
+                    Panic panic = new Panic("Unsupported compare operator between non-numeric expressions", operatorCodeAxis);
+                    panic.show();
+                }
+                return TypeFactory.type(BasicType.BOOLEAN);
             case AND:
             case XOR:
             case OR:

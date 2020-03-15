@@ -10,8 +10,6 @@ Main    <FormalParameterList> ::== <FormalParameterDeclarator> <FormalParameterL
 Epsilon <FormalParameterList> ::== $
 Main    <FormalParameterListSuffix> ::== , <FormalParameterDeclarator> <FormalParameterListSuffix>
 Epsilon <FormalParameterListSuffix> ::== $
-Main <FormalParameterDeclarator> ::== [ID] [ID] <DimensionDeclarator>
-Main    <DimensionDeclarator> ::== ( [NUMBER_LITERAL] )
-Epsilon <DimensionDeclarator> ::== $
+Main <FormalParameterDeclarator> ::== [ID] [ID] <VariableArraySizeDeclarator>
 Main  <FunctionBody> ::== <Statement>
 Empty <FunctionBody> ::== ;

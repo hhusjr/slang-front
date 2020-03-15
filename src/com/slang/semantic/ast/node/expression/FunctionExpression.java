@@ -26,6 +26,7 @@ public class FunctionExpression implements Expression {
     public ArrayList<Pair<String, Object>> getReadableProperties() {
         ArrayList<Pair<String, Object>> properties = new ArrayList<>();
         properties.add(new Pair<>("identifier", this.symbol.identifier));
+        properties.add(new Pair<>("name", this.symbol.getName(this.overloadTypes)));
         properties.add(new Pair<>("type", String.format("%s %s", this.returnType.toString(), this.overloadTypes.toString())));
         return properties;
     }
