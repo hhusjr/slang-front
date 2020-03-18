@@ -95,6 +95,7 @@ public class Type {
         if (type.basicType != this.basicType) return false;
         switch (this.basicType) {
             case ARRAY:
+                if (!type.elementType.equals(this.elementType)) return false;
                 if (type.dim.size() != this.dim.size()) return false;
                 if (!this.getDimBody().equals(type.getDimBody())) return false;
                 break;

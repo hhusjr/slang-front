@@ -22,18 +22,21 @@ class LexerUtil {
         add("var");
         add("while");
         add("if");
+        add("call");
         add("else");
         add("true");
         add("false");
         add("break");
         add("continue");
         add("for");
+        add("__svm__");
     }};
 
     /**
      * 定义转义字符和对应的字符集合
      */
     public static HashMap<Character, Character> escapeCharacterMapping = new HashMap<>() {{
+        put('0', (char) 0);
         put('a', (char) 7);
         put('b', (char) 8);
         put('f', (char) 12);
@@ -182,8 +185,21 @@ public class TokenStream {
                 continue;
             }
 
-            // 如果当前字符是字母a-z A-Z，考虑标识符
-            if (LexerUtil.isAlpha((ch))) {
+            // 如果当前字符是#，表示注释，一直读取到行尾
+            if (ch == '#') {
+                while (ch != '\n') {
+                    // 如果已经到达最后了，不能继续往后扫描
+                    if (currentPosition >= codeBufferSize - 1) {
+                        currentPosition++;
+                        break;
+                    }
+                    ch = code[++currentPosition];
+                }
+                continue;
+            }
+
+            // 如果当前字符是字母a-z A-Z _，考虑标识符
+            if (LexerUtil.isAlpha((ch)) || ch == '_') {
                 StringBuilder identifier = new StringBuilder();
                 while (LexerUtil.isAlpha(ch)
                         || LexerUtil.isDigit(ch)
@@ -212,7 +228,17 @@ public class TokenStream {
                 }
                 ch = code[++currentPosition];
                 while (ch != quote) {
-                    literal.append(ch != '\\' ? ch : LexerUtil.escapeCharacterMapping.get(code[++currentPosition]));
+                    if (ch != '\\') {
+                        literal.append(ch);
+                    } else {
+                        char tmp = code[++currentPosition];
+                        if (LexerUtil.escapeCharacterMapping.containsKey(tmp)) {
+                            literal.append(LexerUtil.escapeCharacterMapping.get(tmp));
+                        } else {
+                            literal.append(ch);
+                            literal.append(tmp);
+                        }
+                    }
                     // 如果已经到达最后了，不能继续往后扫描
                     if (currentPosition >= codeBufferSize - 1) {
                         Panic panic = new Panic("Unmatched quote", codeAxis);
@@ -246,6 +272,8 @@ public class TokenStream {
                 currentPosition++;
                 TokenStream includedFileTokenStream = new TokenStream(path.toString());
                 tokens.addAll(includedFileTokenStream.getTokens());
+                // 需要删除最后一个文件尾符号 $$
+                tokens.remove(tokens.size() - 1);
                 continue;
             }
 
@@ -307,9 +335,17 @@ public class TokenStream {
                             nameFinal = "IS_NEQ";
                         }
                     } else {
-                        if ((ch == '&' || ch == '|') && nextChar == ch) {
-                            currentPosition++;
-                            nameFinal = name + "L";
+                        if (nextChar == ch) {
+                            if (ch == '&' || ch == '|') {
+                                currentPosition++;
+                                nameFinal = name + "L";
+                            } else if (ch == '<') {
+                                currentPosition++;
+                                nameFinal = "SHL";
+                            } else if (ch == '>') {
+                                currentPosition++;
+                                nameFinal = "SHR";
+                            }
                         }
                     }
                 }

@@ -28,6 +28,7 @@ import java.util.Stack;
 public class AstBuilder {
     private SymbolTableManager symbolTableManager = new SymbolTableManager();
     private Stack<LoopStatement> loopBodyStack = new Stack<>();
+    private Type returnType = null;
     
     public Node invokeAstBuilderMethod(ParseTreeNode root) {
         Method method = null;
@@ -162,13 +163,15 @@ public class AstBuilder {
         ParseTreeNode bodyNode = root.getChildren().get(3);
         if (!bodyNode.isFinal()) {
             this.symbolTableManager.enterScope();
+            this.returnType = returnType;
             assert paramTypeList.size() == paramIdentifiersList.size();
+            ArrayList<Symbol> paramIdentifersSymbols = new ArrayList<>();
             for (int i = 0; i < paramTypeList.size(); i++) {
-                this.symbolTableManager.addSymbol(paramIdentifiersList.get(i), new Symbol(paramIdentifiersList.get(i), paramTypeList.get(i)));
+                paramIdentifersSymbols.add(this.symbolTableManager.addSymbol(paramIdentifiersList.get(i), new Symbol(paramIdentifiersList.get(i), paramTypeList.get(i))));
             }
             Statement body = (Statement) this.invokeAstBuilderMethod(bodyNode.getChildren().get(0));
             this.symbolTableManager.leaveScope();
-            return new FunctionDeclarationStatement(identifier, symbol, functionType, returnType, body, paramIdentifiersList);
+            return new FunctionDeclarationStatement(identifier, symbol, functionType, returnType, body, paramIdentifersSymbols);
         }
         return null;
     }
@@ -347,6 +350,25 @@ public class AstBuilder {
 
         return variableDeclarationStatement;
     }
+
+    // return语句
+    public Node buildReturnStatement(ParseTreeNode root) {
+        Token token = root.getChildren().get(0).getToken();
+        if (this.returnType == null) {
+            Panic panic = new Panic("Return statement must be inside a function body", token.codeAxis);
+            panic.show();
+        }
+        Expression expression = null;
+        if (!root.getChildren().get(1).isFinal()) {
+            expression = (Expression) this.invokeAstBuilderMethod(root.getChildren().get(1).getChildren().get(0));
+            if (!expression.getType().compatibleWith(this.returnType)) {
+                Panic panic = new Panic(String.format("Invalid return type, got %s, expected %s", expression.getType(), this.returnType), token.codeAxis);
+                panic.show();
+            }
+        }
+        return new ReturnStatement(expression);
+    }
+
     // IF语句
     public Node buildIfStatement(ParseTreeNode root) {
         Expression condition = (Expression) this.invokeAstBuilderMethod(root.getChildren().get(1));
@@ -418,6 +440,20 @@ public class AstBuilder {
     // 内核级输出语句
     public Node buildPrintkStatement(ParseTreeNode root) {
         return new PrintkStatement((Expression) this.invokeAstBuilderMethod(root.getChildren().get(0)));
+    }
+
+    public Node buildWriteOpcodeStatement(ParseTreeNode root) {
+        String opcode = root.getChildren().get(0).getToken().value;
+        if (!root.getChildren().get(1).isFinal()) {
+            Token token = root.getChildren().get(1).getChildren().get(0).getToken();
+            switch (root.getChildren().get(1).getProductionName()) {
+                case "Main":
+                    return new OpcodeStatement(opcode, Integer.valueOf(token.value));
+                case "GetAddr":
+                    return new OpcodeStatement(opcode, this.symbolTableManager.findSymbol(token.value, token.codeAxis));
+            }
+        }
+        return new OpcodeStatement(opcode);
     }
 
     /*
@@ -519,11 +555,13 @@ public class AstBuilder {
             panic.show();
         }
         ArrayList<Type> types = new ArrayList<>();
+        ArrayList<Expression> expressions = new ArrayList<>();
         if (!root.isFinal()) {
             ParseTreeNode current = root.getChildren().get(0);
             while (!current.isFinal()) {
                 Expression expression = (Expression) this.invokeAstBuilderMethod(current.getChildren().get(0));
                 types.add(expression.getType());
+                expressions.add(expression);
                 current = current.getChildren().get(1);
             }
         }
@@ -533,7 +571,8 @@ public class AstBuilder {
             Panic panic = new Panic(String.format("Function %s does not have the overload %s", identifierToken.value, type), identifierToken.codeAxis);
             panic.show();
         }
-        return new FunctionExpression(symbol, overload.first, overload.second);
+        assert overload != null;
+        return new FunctionExpression(symbol, overload.first, overload.second, expressions);
     }
 
     /*

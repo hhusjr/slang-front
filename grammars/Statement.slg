@@ -6,9 +6,6 @@ Epsilon <Statements> ::== $
 Main <CompoundStatement> ::== { <Statements> }
 Compound <Statement> ::== <CompoundStatement>
 
-# Expression Statement
-Expression <Statement> ::== <Expression> ;
-
 # Variable Declaration Statement
 VariableDeclaration <Statement> ::== VAR [ID] <VariableDeclaratorList> ;
 Main <VariableDeclaratorList> ::== <VariableDeclarator> <VariableDeclaratorListSuffix>
@@ -33,5 +30,19 @@ While    <Statement> ::== WHILE ( <Expression> ) <Statement>
 Break    <Statement> ::== [BREAK] ;
 Continue <Statement> ::== [CONTINUE] ;
 
+# Expression statement
+Expression <Statement> ::== <Expression> ;
+
 # Printk statement
 Printk   <Statement> ::== PRINTK <Expression> ;
+
+# Write svm opcode statement
+WriteOpcode <Statement> ::== __SVM__ [ID] <OpcodeParam> ;
+Main    <OpcodeParam> ::== [NUMBER_LITERAL]
+GetAddr <OpcodeParam> ::== AND [ID]
+Epsilon <OpcodeParam> ::== $
+
+# Return statement
+Return <Statement> ::== [RET] <ReturnValue> ;
+Main    <ReturnValue> ::== <Expression>
+Epsilon <ReturnValue> ::== $

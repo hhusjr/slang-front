@@ -6,6 +6,7 @@ import java.util.HashMap;
 public class Instruction {
     public int addr;
     public InstructionCode code;
+    public String otherCode;
     public ArrayList<Integer> params;
     public HashMap<InstructionCode, String> instructionCodeStringMapping = new HashMap<>() {{
         put(InstructionCode.CONSTANT, "CONSTANT");
@@ -41,11 +42,19 @@ public class Instruction {
         put(InstructionCode.POP_OP, "POP_OP");
         put(InstructionCode.VMALLOC, "VMALLOC");
         put(InstructionCode.CMALLOC, "CMALLOC");
+        put(InstructionCode.TYPE_CVT, "TYPE_CVT");
     }};
 
     public Instruction(int addr, InstructionCode code, int... params) {
         this.addr = addr;
         this.code = code;
+        this.setParams(params);
+    }
+
+    public Instruction(int addr, String code, int... params) {
+        this.code = InstructionCode.OTHER;
+        this.addr = addr;
+        this.otherCode = code;
         this.setParams(params);
     }
 
@@ -59,7 +68,14 @@ public class Instruction {
     public String dump() {
         ArrayList<String> symbols = new ArrayList<>();
         symbols.add(String.valueOf(this.addr));
-        symbols.add(this.instructionCodeStringMapping.get(this.code));
+
+        String instructionString;
+        if (this.code == InstructionCode.OTHER) {
+            instructionString = this.otherCode;
+        } else {
+            instructionString = this.instructionCodeStringMapping.get(this.code);
+        }
+        symbols.add(instructionString);
         for (int param : params) {
             symbols.add(String.valueOf(param));
         }

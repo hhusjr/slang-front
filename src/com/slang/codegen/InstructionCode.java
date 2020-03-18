@@ -33,5 +33,7 @@ public enum InstructionCode {
     NOOP,
     POP_OP,
     VMALLOC,
-    CMALLOC
+    CMALLOC,
+    OTHER,
+    TYPE_CVT,
 }

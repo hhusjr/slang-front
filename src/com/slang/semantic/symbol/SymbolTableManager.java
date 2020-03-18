@@ -38,9 +38,10 @@ public class SymbolTableManager {
         return symbolTable.getSymbol(identifier);
     }
 
-    public void addSymbol(String identifier, Symbol symbol) {
+    public Symbol addSymbol(String identifier, Symbol symbol) {
         symbol.level = this.level;
         this.currentSymbolTable.addSymbol(identifier, symbol);
+        return symbol;
     }
 
     public void enterScope() {

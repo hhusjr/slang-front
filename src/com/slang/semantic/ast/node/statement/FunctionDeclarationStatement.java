@@ -11,10 +11,10 @@ public class FunctionDeclarationStatement implements Statement {
     public Type types;
     public Type returnType;
     public Statement body;
-    public ArrayList<String> paramIdentifiers;
+    public ArrayList<Symbol> paramIdentifiers;
     public Symbol symbol;
 
-    public FunctionDeclarationStatement(String identifier, Symbol symbol, Type types, Type returnType, Statement body, ArrayList<String> paramIdentifiers) {
+    public FunctionDeclarationStatement(String identifier, Symbol symbol, Type types, Type returnType, Statement body, ArrayList<Symbol> paramIdentifiers) {
         this.identifier = identifier;
         this.types = types;
         this.returnType = returnType;
@@ -33,7 +33,6 @@ public class FunctionDeclarationStatement implements Statement {
         properties.add(new Pair<>("identifier", this.identifier));
         properties.add(new Pair<>("type", String.format("%s %s", this.returnType.toString(), this.types.toString())));
         properties.add(new Pair<>("body", this.body));
-        properties.add(new Pair<>("paramIdentifiers", String.join(", ", this.paramIdentifiers)));
         return properties;
     }
 
