@@ -43,6 +43,7 @@ public class Instruction {
         put(InstructionCode.VMALLOC, "VMALLOC");
         put(InstructionCode.CMALLOC, "CMALLOC");
         put(InstructionCode.TYPE_CVT, "TYPE_CVT");
+        put(InstructionCode.SIZE_OF, "SIZE_OF");
     }};
 
     public Instruction(int addr, InstructionCode code, int... params) {

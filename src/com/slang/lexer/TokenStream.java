@@ -29,6 +29,7 @@ class LexerUtil {
         add("break");
         add("continue");
         add("for");
+        add("sizeof");
         add("__svm__");
     }};
 
@@ -81,7 +82,7 @@ class LexerUtil {
      * @return 是否为字母，如果是则返回true，否则返回false
      */
     public static boolean isAlpha(char ch) {
-        return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'X');
+        return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
     }
 
     /**

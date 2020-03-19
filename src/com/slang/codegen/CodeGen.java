@@ -371,8 +371,16 @@ public class CodeGen {
             return this.genAssignExpression((AssignExpression) expression, true);
         } else if (expression instanceof FunctionExpression) {
             return this.genFunctionExpression((FunctionExpression) expression, false);
+        } else if (expression instanceof SizeOfExpression) {
+            return this.genSizeOfExpression((SizeOfExpression) expression);
         }
         return null;
+    }
+
+    private Pair<Integer, Integer> genSizeOfExpression(SizeOfExpression sizeOfExpression) {
+        int from = Objects.requireNonNull(this.genExpression(sizeOfExpression.expression)).first;
+        int to = this.newInstruction(InstructionCode.SIZE_OF);
+        return new Pair<>(from, to);
     }
 
     private Pair<Integer, Integer> genFunctionExpression(FunctionExpression expression, boolean directlyFromExpressionStatement) {

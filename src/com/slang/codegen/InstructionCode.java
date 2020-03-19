@@ -36,4 +36,5 @@ public enum InstructionCode {
     CMALLOC,
     OTHER,
     TYPE_CVT,
+    SIZE_OF,
 }

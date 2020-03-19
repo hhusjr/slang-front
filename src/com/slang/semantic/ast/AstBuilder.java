@@ -470,10 +470,16 @@ public class AstBuilder {
         Token token = root.getChildren().get(0).getToken();
         return new Constant(ConstantOperator.NUMBER_LITERAL, token.value, token.codeAxis);
     }
+
     public Node buildCharLiteralPrimaryExpression(ParseTreeNode root) {
         Token token = root.getChildren().get(0).getToken();
         return new Constant(ConstantOperator.CHAR_LITERAL, token.value, token.codeAxis);
     }
+
+    public Node buildSizeOfPrimaryExpression(ParseTreeNode root) {
+        return new SizeOfExpression((Expression) this.invokeAstBuilderMethod(root.getChildren().get(0)));
+    }
+
     public Node buildStringLiteralPrimaryExpression(ParseTreeNode root) {
         Token token = root.getChildren().get(0).getToken();
         ArrayList<Expression> constants = new ArrayList<>();

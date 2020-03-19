@@ -1,6 +1,25 @@
 # IO库 - Slang Runtime Library
 # @author Junru Shen
 
+# 输入字符
+func char getch() {
+    __svm__ GETCH;
+    __svm__ RET;
+}
+
+# 输入字符串
+func void read_str(char target[]) {
+    var int buffer_size = sizeof(target);
+    var int cur = 0;
+    var char ch = '\0';
+    while (ch != '\n' && ch != ' ') {
+        target[cur] = ch = getch();
+        if (cur < buffer_size - 2) cur = cur + 1;
+        else break;
+    }
+    target[cur + 1] = '\0';
+}
+
 # 输出字符
 func void write(char ch) {
     __svm__ LOAD_NAME &ch;
