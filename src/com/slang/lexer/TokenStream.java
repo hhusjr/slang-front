@@ -119,10 +119,16 @@ public class TokenStream {
     private String path;
     private int codeBufferSize;
     private int tokenPointer = 0;
+    private ArrayList<String> includedPaths = new ArrayList<>();
+
+    public ArrayList<String> getIncludedPaths() {
+        return includedPaths;
+    }
 
     /**
      * 初始化Token流
      * 遇到文件不存在或者IO故障则会引发错误
+     *
      * @param path 源代码文件
      */
     public TokenStream(String path) {
@@ -271,10 +277,17 @@ public class TokenStream {
                     ch = code[++currentPosition];
                 }
                 currentPosition++;
-                TokenStream includedFileTokenStream = new TokenStream(path.toString());
+                String pathStr = path.toString();
+                if (this.includedPaths.contains(pathStr)) {
+                    continue;
+                }
+                TokenStream includedFileTokenStream = new TokenStream(pathStr);
                 tokens.addAll(includedFileTokenStream.getTokens());
                 // 需要删除最后一个文件尾符号 $$
                 tokens.remove(tokens.size() - 1);
+                // 包含文件加入
+                includedPaths.add(pathStr);
+                includedPaths.addAll(includedFileTokenStream.getIncludedPaths());
                 continue;
             }
 

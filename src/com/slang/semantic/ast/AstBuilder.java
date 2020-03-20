@@ -161,19 +161,20 @@ public class AstBuilder {
             symbol.newOverload(functionType, returnType);
         }
         ParseTreeNode bodyNode = root.getChildren().get(3);
-        if (!bodyNode.isFinal()) {
-            this.symbolTableManager.enterScope();
-            this.returnType = returnType;
-            assert paramTypeList.size() == paramIdentifiersList.size();
-            ArrayList<Symbol> paramIdentifersSymbols = new ArrayList<>();
-            for (int i = 0; i < paramTypeList.size(); i++) {
-                paramIdentifersSymbols.add(this.symbolTableManager.addSymbol(paramIdentifiersList.get(i), new Symbol(paramIdentifiersList.get(i), paramTypeList.get(i))));
-            }
-            Statement body = (Statement) this.invokeAstBuilderMethod(bodyNode.getChildren().get(0));
-            this.symbolTableManager.leaveScope();
-            return new FunctionDeclarationStatement(identifier, symbol, functionType, returnType, body, paramIdentifersSymbols);
+
+        this.symbolTableManager.enterScope();
+        this.returnType = returnType;
+        assert paramTypeList.size() == paramIdentifiersList.size();
+        ArrayList<Symbol> paramIdentifersSymbols = new ArrayList<>();
+        for (int i = 0; i < paramTypeList.size(); i++) {
+            paramIdentifersSymbols.add(this.symbolTableManager.addSymbol(paramIdentifiersList.get(i), new Symbol(paramIdentifiersList.get(i), paramTypeList.get(i))));
         }
-        return null;
+        Statement body = null;
+        if (!bodyNode.isFinal()) {
+            body = (Statement) this.invokeAstBuilderMethod(bodyNode.getChildren().get(0));
+        }
+        this.symbolTableManager.leaveScope();
+        return new FunctionDeclarationStatement(identifier, symbol, functionType, returnType, body, paramIdentifersSymbols);
     }
 
     /*

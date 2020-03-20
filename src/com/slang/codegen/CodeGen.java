@@ -328,9 +328,9 @@ public class CodeGen {
         for (Expression expression : arrayMember.arrayMemberExpression) {
             dimFactor /= dim.get(index);
             this.genExpression(expression);
+            this.newInstruction(InstructionCode.LOAD_INT, dimFactor);
+            this.newInstruction(InstructionCode.BINARY_OP, 2);
             if (index != 0) {
-                this.newInstruction(InstructionCode.LOAD_INT, dimFactor);
-                this.newInstruction(InstructionCode.BINARY_OP, 2);
                 this.newInstruction(InstructionCode.BINARY_OP, 0);
             }
             index++;
@@ -691,14 +691,22 @@ public class CodeGen {
             return this.genFlowControlStatement((FlowControlStatement) statement);
         } else if (statement instanceof FunctionDeclarationStatement) {
             FunctionDeclarationStatement functionDeclarationStatement = (FunctionDeclarationStatement) statement;
-            // 函数需要延迟生成，先加入函数集合中
             String functionName = functionDeclarationStatement.getFunctionName();
-            FunctionAttribute functionAttribute = new FunctionAttribute(
-                    functionName,
-                    functionDeclarationStatement.paramIdentifiers,
-                    functionDeclarationStatement.body
-            );
-            this.functions.put(functionName, functionAttribute);
+            // 函数需要延迟生成，先加入函数集合中
+            if (!this.functions.containsKey(functionName)) {
+                // 如果当前不包含该函数（前向声明或直接定义）
+                FunctionAttribute functionAttribute = new FunctionAttribute(
+                        functionName,
+                        functionDeclarationStatement.paramIdentifiers,
+                        functionDeclarationStatement.body
+                );
+                this.functions.put(functionName, functionAttribute);
+            } else {
+                // 如果已经包含（实现定义或重写）
+                FunctionAttribute targetFunction = this.functions.get(functionName);
+                targetFunction.paramSymbols = functionDeclarationStatement.paramIdentifiers;
+                targetFunction.body = functionDeclarationStatement.body;
+            }
             return null;
         } else if (statement instanceof OpcodeStatement) {
             return this.genOpcodeStatement((OpcodeStatement) statement);
@@ -771,14 +779,18 @@ public class CodeGen {
                 this.newInstruction(InstructionCode.LOAD_NULL);
                 this.newInstruction(InstructionCode.RET);
                 this.getInstruction(vMallocPos).setParams(this.localVariablesNames.size());
-                this.getInstruction(request.second).setParams(addr);
             }
-
+            this.getInstruction(request.second).setParams(functionAttribute.headAddr);
         }
     }
 
     private Pair<Integer, Integer> genReturnStatement(ReturnStatement returnStatement) {
-        int from = Objects.requireNonNull(this.genExpression(returnStatement.expression)).first;
+        int from = -1;
+        if (returnStatement.expression != null) {
+            from = Objects.requireNonNull(this.genExpression(returnStatement.expression)).first;
+        } else {
+            from = this.newInstruction(InstructionCode.LOAD_NULL);
+        }
         int to = this.newInstruction(InstructionCode.RET);
         return new Pair<>(from, to);
     }

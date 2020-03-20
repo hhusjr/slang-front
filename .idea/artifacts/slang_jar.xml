@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="slang:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/slang_jar</output-path>
+    <root id="archive" name="slang.jar">
+      <element id="module-output" name="slang" />
+      <element id="extracted-dir" path="$USER_HOME$/Downloads/java-getopt-1.0.14.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

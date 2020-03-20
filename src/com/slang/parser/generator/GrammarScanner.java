@@ -7,27 +7,21 @@ import com.slang.parser.symbol.NonTerminal;
 import com.slang.parser.symbol.Production;
 import com.slang.utils.Panic;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class GrammarScanner {
     private ArrayList<Production> productions = new ArrayList<>();
 
-    public GrammarScanner(File file) {
-        try {
-            Scanner scanner = new Scanner(file);
-            while (scanner.hasNext()) {
-                String grammar = scanner.nextLine().trim();
-                if (grammar.length() == 0 || grammar.charAt(0) == '#') {
-                    continue;
-                }
-                this.productions.add(this.getProduction(grammar));
+    public GrammarScanner(InputStream inputStream) {
+        Scanner scanner = new Scanner(inputStream);
+        while (scanner.hasNext()) {
+            String grammar = scanner.nextLine().trim();
+            if (grammar.length() == 0 || grammar.charAt(0) == '#') {
+                continue;
             }
-        } catch (FileNotFoundException e) {
-            Panic panic = new Panic(String.format("parser: Grammar file %s not found", file.getPath()), new CodeAxis());
-            panic.show();
+            this.productions.add(this.getProduction(grammar));
         }
     }
 

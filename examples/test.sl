@@ -1,5 +1,3 @@
-`runtime/io.sl`
-`runtime/math.sl`
-var char a[20];
-read_str(a);
-write(a);
+var int a[3];
+a[0] = a[1] = 3;
+printk a[0] + a[1];
